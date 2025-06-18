@@ -32,7 +32,7 @@
 #include "BinaryInstruction.h"
 #include "MoveInstruction.h"
 #include "GotoInstruction.h"
-#include "CondGotoInstruction.h" 
+#include "CondGotoInstruction.h"
 #include "Move2Instruction.h"
 #include "ArgInstruction.h"
 #include "Value.h"
@@ -167,11 +167,19 @@ bool IRGenerator::ir_compile_unit(ast_node * node)
 
     for (auto son: node->sons) {
 
-        // 遍历编译单元，要么是函数定义，要么是语句
-        ast_node * son_node = ir_visit_ast_node(son);
-        if (!son_node) {
-            // TODO 自行追加语义错误处理
-            return false;
+        // 检查是否是全局数组声明
+        if (son->node_type == ast_operator_type::AST_OP_ARRAY_DECL) {
+            // 处理全局数组声明
+            if (!ir_global_array_decl(son)) {
+                return false;
+            }
+        } 
+        else {
+            // 处理其他类型的节点
+            ast_node* son_node = ir_visit_ast_node(son);
+            if (!son_node) {
+                return false;
+            }
         }
     }
 
@@ -1743,11 +1751,10 @@ bool IRGenerator::processGetArrayCall(ast_node* node)
     Function* getarrayFunc = module->findFunction("getarray");
     
     if (!getarrayFunc) {
-        // 如果函数未定义，创建内置函数声明
-        // 不要创建空的形参列表变量，直接使用重载版本的newFunction
-        getarrayFunc = module->newFunction("getarray", IntegerType::getTypeInt(), {},true);
+        // 创建内置函数声明，不需要提供形参列表
+        getarrayFunc = module->newFunction("getarray", IntegerType::getTypeInt(), {});
         
-        // 添加形参信息以修复函数声明
+        // 手动添加形参
         FormalParam* arrayParam = new FormalParam(IntegerType::getTypeInt(), "array");
         FormalParam* sizeParam = new FormalParam(IntegerType::getTypeInt(), "size");
         getarrayFunc->getParams().push_back(arrayParam);
@@ -1758,7 +1765,6 @@ bool IRGenerator::processGetArrayCall(ast_node* node)
     FuncCallInstruction* callInst = new FuncCallInstruction(
         currentFunc, getarrayFunc, params, IntegerType::getTypeInt()
     );
-    
     node->blockInsts.addInst(callInst);
     node->val = callInst;
     
@@ -1814,11 +1820,10 @@ bool IRGenerator::processPutArrayCall(ast_node* node)
     Function* putarrayFunc = module->findFunction("putarray");
     
     if (!putarrayFunc) {
-        // 如果函数未定义，创建内置函数声明
-        // 不要创建空的形参列表变量，直接使用重载版本的newFunction
-        putarrayFunc = module->newFunction("putarray", VoidType::getType(), {},true);
+        // 创建内置函数声明，不需要提供形参列表
+        putarrayFunc = module->newFunction("putarray", VoidType::getType(), {});
         
-        // 添加形参信息以修复函数声明
+        // 手动添加形参
         FormalParam* sizeParam = new FormalParam(IntegerType::getTypeInt(), "size");
         FormalParam* arrayParam = new FormalParam(IntegerType::getTypeInt(), "array");
         putarrayFunc->getParams().push_back(sizeParam);
@@ -1835,6 +1840,40 @@ bool IRGenerator::processPutArrayCall(ast_node* node)
     
     // 重置参数计数器，为下一次函数调用准备
     currentFunc->realArgCountReset();
+    
+    return true;
+}
+
+// 添加全局数组声明处理
+bool IRGenerator::ir_global_array_decl(ast_node* node) 
+{
+    // 获取数组元素类型
+    Type* elementType = IntegerType::getTypeInt(); // 默认为int类型
+    
+    // 获取数组名
+    std::string arrayName = node->sons[1]->name;
+    
+    // 收集维度信息
+    std::vector<int> dimensions;
+    for (size_t i = 2; i < node->sons.size(); i++) {
+        ast_node* dimNode = node->sons[i];
+        if (dimNode->node_type == ast_operator_type::AST_OP_LEAF_LITERAL_UINT) {
+            dimensions.push_back(dimNode->integer_val);
+        } else {
+            // 全局数组必须使用常量维度
+            minic_log(LOG_ERROR, "全局数组必须使用常量维度");
+            return false;
+        }
+    }
+    
+    // 创建数组类型
+    ArrayType* arrayType = ArrayType::getType(elementType, dimensions);
+    
+    // 创建全局数组变量
+    GlobalVariable* globalVar = module->newGlobalVariable(arrayType, arrayName);
+    
+    // 存储到节点中
+    node->val = globalVar;
     
     return true;
 }

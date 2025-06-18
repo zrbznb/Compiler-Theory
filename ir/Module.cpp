@@ -16,6 +16,7 @@
 
 #include "Module.h"
 #include "Values/ArrayVariable.h"
+#include "Values/GlobalVariable.h"
 #include <algorithm>  // 添加这个头文件以使用std::find_if
 
 ///
@@ -98,4 +99,76 @@ ArrayParamVariable* Module::newArrayParamVariable(ArrayType* arrayType, const st
     }
     
     return nullptr;
+}
+
+/// @brief 新建全局变量
+/// @param type 变量类型
+/// @param name 变量名
+/// @return 全局变量指针
+GlobalVariable* Module::newGlobalVariable(Type* type, const std::string& name)
+{
+    // 先查找是否已存在同名全局变量
+    GlobalVariable* existingVar = findGlobalVariable(name);
+    if (existingVar) {
+        return existingVar;
+    }
+    
+    // 创建新的全局变量
+    GlobalVariable* globalVar = new GlobalVariable(type, name);
+    globalVarsVector.push_back(globalVar);
+    
+    return globalVar;
+}
+
+/// @brief 新建全局数组变量
+/// @param arrayType 数组类型
+/// @param name 变量名
+/// @return 全局数组变量指针
+GlobalVariable* Module::newGlobalArrayVariable(ArrayType* arrayType, const std::string& name)
+{
+    // 先查找是否已存在同名全局变量
+    GlobalVariable* existingVar = findGlobalVariable(name);
+    if (existingVar) {
+        return existingVar;
+    }
+    
+    // 创建新的全局数组变量
+    GlobalVariable* globalArrayVar = new GlobalVariable(arrayType, name);
+    globalVarsVector.push_back(globalArrayVar);
+    
+    return globalArrayVar;
+}
+
+/// @brief 查找全局变量
+/// @param name 变量名
+/// @return 全局变量指针，未找到返回nullptr
+GlobalVariable* Module::findGlobalVariable(const std::string& name) const
+{
+    for (auto var : globalVarsVector) {
+        if (var->getName() == name) {
+            return var;
+        }
+    }
+    return nullptr;
+}
+
+void Module::outputIR(const std::string& filename)
+{
+    /* 输出全局变量定义 */
+    FILE* fp = fopen(filename.c_str(), "w");
+    if (fp) {
+        // 输出全局变量
+        for (auto var : globalVarsVector) {
+            fprintf(fp, "declare %s\n", var->toDeclareString().c_str());
+        }
+
+        // 输出函数
+        for (auto func : functions) {
+            std::string funcIR;
+            func->toString(funcIR);
+            fprintf(fp, "%s\n", funcIR.c_str());
+        }
+
+        fclose(fp);
+    }
 }

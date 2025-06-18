@@ -178,6 +178,8 @@ set(IR_SRCS
 	ir/Instructions/Move2Instruction.h
 	ir/Instructions/ArrayAccessInstruction.cpp
 	ir/Instructions/ArrayAccessInstruction.h
+	ir/Types/ArrayType.cpp
+	ir/Types/ArrayType.h
 	ir/Types/VoidType.h
 	ir/Types/VoidType.cpp
 	ir/Types/LabelType.h

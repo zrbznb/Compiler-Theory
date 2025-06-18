@@ -133,6 +133,8 @@ public:
     /// @brief 对IR指令中没有名字的全部命名
     ///
     void renameIR();
+    GlobalVariable * newGlobalVariable(Type * type, std::string name);
+
 
 protected:
     /// @brief 根据整数值获取当前符号
@@ -146,8 +148,6 @@ protected:
     /// @param name 名字
     /// @return Value* 全局变量
     ///
-    GlobalVariable * newGlobalVariable(Type * type, std::string name);
-
     /// @brief 根据变量名获取当前符号（只管理全局变量）
     /// \param name 变量名
     /// \return 变量对应的值

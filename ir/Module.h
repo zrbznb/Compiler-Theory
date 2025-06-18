@@ -21,6 +21,7 @@
 
 #include "Function.h"
 #include "Values/ArrayVariable.h"
+#include "Values/GlobalVariable.h"
 
 ///
 /// @brief 模块类，管理所有的全局变量、函数等信息
@@ -89,6 +90,27 @@ public:
     /// @return 创建的数组参数变量
     ArrayParamVariable* newArrayParamVariable(ArrayType* arrayType, const std::string& name = "");
 
+    /// @brief 新建全局变量
+    /// @param type 变量类型
+    /// @param name 变量名
+    /// @return 全局变量指针
+    GlobalVariable* newGlobalVariable(Type* type, const std::string& name = "");
+
+    /// @brief 新建全局数组变量
+    /// @param arrayType 数组类型
+    /// @param name 变量名
+    /// @return 全局数组变量指针
+    GlobalVariable* newGlobalArrayVariable(ArrayType* arrayType, const std::string& name = "");
+
+    /// @brief 查找全局变量
+    /// @param name 变量名
+    /// @return 全局变量指针，未找到返回nullptr
+    GlobalVariable* findGlobalVariable(const std::string& name) const;
+
+    /// @brief 输出IR到文件
+    /// @param filename 文件名
+    void outputIR(const std::string& filename);
+
 private:
     ///
     /// @brief 当前处理的函数
@@ -109,4 +131,9 @@ private:
     /// @brief 当前作用域的层级
     ///
     int32_t scopeLevel = 0;
+
+    ///
+    /// @brief 全局变量列表
+    ///
+    std::vector<GlobalVariable*> globalVarsVector;
 };

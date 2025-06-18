@@ -23,9 +23,7 @@
 #include "Module.h"
 #include "LabelInstruction.h" // 添加这个头文件引入
 #include "Values/ArrayVariable.h"
-#include "Instructions/ArrayAccessInstruction.h"
-#include "Instructions/LoadArrayInstruction.h"
-#include "Instructions/StoreArrayInstruction.h"
+#include "Values/GlobalVariable.h"
 
 /// @brief AST遍历产生线性IR类
 class IRGenerator {
@@ -216,6 +214,9 @@ protected:
 
     /// @brief 处理putarray内置函数调用
     bool processPutArrayCall(ast_node* node);
+
+    /// @brief 处理全局数组声明
+    bool ir_global_array_decl(ast_node* node);
 
 private:
     /// @brief 抽象语法树的根
