@@ -14,6 +14,7 @@
 /// <tr><td>2024-11-23 <td>1.1     <td>zenglj  <td>表达式版增强
 /// </table>
 ///
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <unordered_map>
@@ -35,10 +36,12 @@
 #include "CondGotoInstruction.h"
 #include "Move2Instruction.h"
 #include "ArgInstruction.h"
+#include "PointerType.h"
 #include "Value.h"
 #include "Types/ArrayType.h"
 #include "Instructions/ArrayAccessInstruction.h"
 #include "Types/IntegerType.h"
+#include "PointerType.h"
 
 /// @brief 构造函数
 /// @param _root AST的根
@@ -469,6 +472,13 @@ bool IRGenerator::ir_add(ast_node * node)
 
     // 加法的左边操作数
     ast_node * left = ir_visit_ast_node(src1_node);
+    Move2Instruction * movInst=nullptr;
+    if (src1_node->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
+        movInst = new Move2Instruction(module->getCurrentFunction(), left->val, 1);
+        left->val = movInst;
+    }
+    node->blockInsts.addInst(left->blockInsts);
+    node->blockInsts.addInst(movInst);
     if (!left) {
         // 某个变量没有定值
         return false;
@@ -476,6 +486,13 @@ bool IRGenerator::ir_add(ast_node * node)
 
     // 加法的右边操作数
     ast_node * right = ir_visit_ast_node(src2_node);
+    Move2Instruction * movInst2=nullptr;
+    if (src1_node->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
+        movInst2 = new Move2Instruction(module->getCurrentFunction(), right->val, 1);
+        right->val = movInst2;
+    }
+    node->blockInsts.addInst(right->blockInsts);
+    node->blockInsts.addInst(movInst2);
     if (!right) {
         // 某个变量没有定值
         return false;
@@ -490,8 +507,8 @@ bool IRGenerator::ir_add(ast_node * node)
                                                         IntegerType::getTypeInt());
 
     // 创建临时变量保存IR的值，以及线性IR指令
-    node->blockInsts.addInst(left->blockInsts);
-    node->blockInsts.addInst(right->blockInsts);
+    
+    
     node->blockInsts.addInst(addInst);
 
     node->val = addInst;
@@ -736,7 +753,8 @@ bool IRGenerator::ir_assign(ast_node * node)
     // 这里只处理整型的数据，如需支持实数，则需要针对类型进行处理
 
     MoveInstruction * movInst = new MoveInstruction(module->getCurrentFunction(), left->val, right->val);
-
+    node->blockInsts.addInst(left->blockInsts);
+    node->blockInsts.addInst(right->blockInsts);
     // 创建临时变量保存IR的值，以及线性IR指令
     node->blockInsts.addInst(movInst);
 
@@ -846,7 +864,14 @@ bool IRGenerator::ir_declare_statment(ast_node * node)
     for (auto & child: node->sons) {
 
         // 遍历每个变量声明
-        result = ir_variable_declare(child);
+        if(child->node_type ==ast_operator_type::AST_OP_ARRAY_DECL) {
+			// 不是变量声明节点，跳过
+            if (module->getCurrentFunction())
+                result = ir_array_decl(child);
+            else result= ir_global_array_decl(child);
+        }
+        else 
+        	result = ir_variable_declare(child);
         if (!result) {
             break;
         }
@@ -1625,46 +1650,46 @@ bool IRGenerator::ir_array_type(ast_node* node)
 /// @brief 数组变量声明AST节点翻译成线性中间IR
 /// @param node AST节点
 /// @return 翻译是否成功，true：成功，false：失败
-bool IRGenerator::ir_array_decl(ast_node* node) 
-{
-    // 处理数组类型节点
-    ast_node* typeNode = node->sons[0];
-    ast_node* typeResult = ir_visit_ast_node(typeNode);
-    if (!typeResult) {
-        return false;
-    }
+// bool IRGenerator::ir_array_decl(ast_node* node) 
+// {
+//     // 处理数组类型节点
+//     ast_node* typeNode = node->sons[0];
+//     ast_node* typeResult = ir_visit_ast_node(typeNode);
+//     if (!typeResult) {
+//         return false;
+//     }
     
-    // 创建适当的数组类型
-    Type* baseType = typeNode->type;
+//     // 创建适当的数组类型
+//     Type* baseType = typeNode->type;
     
-    // 获取数组变量名
-    ast_node* idNode = node->sons[1];
-    std::string arrayName = idNode->name;
+//     // 获取数组变量名
+//     ast_node* idNode = node->sons[1];
+//     std::string arrayName = idNode->name;
     
-    // 创建数组变量
-    Function* currentFunc = module->getCurrentFunction();
+//     // 创建数组变量
+//     Function* currentFunc = module->getCurrentFunction();
     
-    // 创建本地变量
-    Value* arrayVar = nullptr;
-    if (currentFunc) {
-        arrayVar = currentFunc->newLocalVarValue(baseType, arrayName);
-    }
+//     // 创建本地变量
+//     Value* arrayVar = nullptr;
+//     if (currentFunc) {
+//         arrayVar = module->newVarValue(baseType, arrayName);
+//     }
     
-    // 处理可能的初始化表达式
-    if (node->sons.size() > 3) {
-        // 最后一个子节点可能是初始化表达式
-        ast_node* initExpr = node->sons.back();
-        ast_node* initResult = ir_visit_ast_node(initExpr);
-        if (initResult && initResult->val) {
-            // 添加初始化表达式的计算指令
-            node->blockInsts.addInst(initResult->blockInsts);
-        }
-    }
+//     // 处理可能的初始化表达式
+//     if (node->sons.size() > 3) {
+//         // 最后一个子节点可能是初始化表达式
+//         ast_node* initExpr = node->sons.back();
+//         ast_node* initResult = ir_visit_ast_node(initExpr);
+//         if (initResult && initResult->val) {
+//             // 添加初始化表达式的计算指令
+//             node->blockInsts.addInst(initResult->blockInsts);
+//         }
+//     }
     
-    node->val = arrayVar;
+//     node->val = arrayVar;
     
-    return true;
-}
+//     return true;
+// }
 
 // 实现数组访问节点翻译
 bool IRGenerator::ir_array_access(ast_node* node) 
@@ -1690,17 +1715,55 @@ bool IRGenerator::ir_array_access(ast_node* node)
         
         indices.push_back(indexResult->val);
     }
-    
-    Function* currentFunc = module->getCurrentFunction();
-    
-    // 创建数组访问指令
-    Type* elementType = IntegerType::getTypeInt(); // 简化：假设元素类型为int
-    ArrayAccessInstruction* accessInst = new ArrayAccessInstruction(
-        currentFunc, arrayResult->val, indices, elementType
-    );
-    
-    node->blockInsts.addInst(accessInst);
-    node->val = accessInst;
+    BinaryInstruction *t = nullptr;
+    BinaryInstruction * mulInst;
+    for (int i = 0; i < indices.size() - 1; i++) {
+        if (t==nullptr) {
+            mulInst = new BinaryInstruction(module->getCurrentFunction(),
+                                                        IRInstOperator::IRINST_OP_MUL_I,
+                                                        indices[i],
+                                                        module->newConstInt(arrayResult->val->getDimensions()[i+1 ]),
+                                                        IntegerType::getTypeInt());
+        } else {
+            mulInst = new BinaryInstruction(module->getCurrentFunction(),
+                                      IRInstOperator::IRINST_OP_MUL_I,
+                                      t,
+                                      module->newConstInt(arrayResult->val->getDimensions()[i+1]),
+                                      IntegerType::getTypeInt());
+            }
+        node->blockInsts.addInst(mulInst);
+        BinaryInstruction * addInst = new BinaryInstruction(module->getCurrentFunction(),
+                                                        IRInstOperator::IRINST_OP_ADD_I,
+                                                        indices[i+1],
+                                                        mulInst,
+                                                        IntegerType::getTypeInt());
+        // indices[i] = module->newConstInt(0);
+        t=addInst;
+        node->blockInsts.addInst(addInst);
+    }
+    BinaryInstruction * mulInst4=nullptr;
+    if (t != nullptr) {
+        mulInst4 = new BinaryInstruction(module->getCurrentFunction(),
+                                                            IRInstOperator::IRINST_OP_MUL_I,
+                                                            t,
+                                                            module->newConstInt(4),
+                                                            IntegerType::getTypeInt());
+		node->blockInsts.addInst(mulInst4);
+    }
+    // 创建 int* 类型
+	Type* intType = IntegerType::getTypeInt();  // 假设32位整数
+	// ...existing code...
+	PointerType* intPtrType = const_cast<PointerType*>(PointerType::get(intType));
+// ...existing code...
+
+    BinaryInstruction * addInst2 = new BinaryInstruction(module->getCurrentFunction(),
+                                                            IRInstOperator::IRINST_OP_ADD_I,
+                                                            arrayResult->val,
+                                                            mulInst4,
+                                                    		intPtrType);
+		node->blockInsts.addInst(addInst2);
+
+    node->val = addInst2;
     
     return true;
 }
@@ -1843,6 +1906,39 @@ bool IRGenerator::processPutArrayCall(ast_node* node)
     
     return true;
 }
+bool IRGenerator::ir_array_decl(ast_node* node) 
+{
+    // 获取数组元素类型
+    Type* elementType = IntegerType::getTypeInt(); // 默认为int类型
+    
+    // 获取数组名
+    std::string arrayName = node->sons[1]->name;
+    
+    // 收集维度信息
+    std::vector<int> dimensions;
+    for (size_t i = 2; i < node->sons.size(); i++) {
+        ast_node* dimNode = node->sons[i];
+        if (dimNode->node_type == ast_operator_type::AST_OP_LEAF_LITERAL_UINT) {
+            dimensions.push_back(dimNode->integer_val);
+        } else {
+            // 全局数组必须使用常量维度
+            minic_log(LOG_ERROR, "全局数组必须使用常量维度");
+            return false;
+        }
+    }
+    
+    // 创建数组类型
+    ArrayType* arrayType = ArrayType::getType(elementType);
+
+    // 创建全局数组变量
+    Value* arrayVar = module->newVarValue(arrayType, arrayName, dimensions);
+    // GlobalVariable* globalVar = module->newGlobalVariable(arrayType, arrayName, dimensions);
+    
+    // 存储到节点中
+    node->val = arrayVar;
+    
+    return true;
+}
 
 // 添加全局数组声明处理
 bool IRGenerator::ir_global_array_decl(ast_node* node) 
@@ -1867,10 +1963,10 @@ bool IRGenerator::ir_global_array_decl(ast_node* node)
     }
     
     // 创建数组类型
-    ArrayType* arrayType = ArrayType::getType(elementType, dimensions);
+    ArrayType* arrayType = ArrayType::getType(elementType);
     
     // 创建全局数组变量
-    GlobalVariable* globalVar = module->newGlobalVariable(arrayType, arrayName);
+    GlobalVariable* globalVar = module->newGlobalVariable(arrayType, arrayName, dimensions);
     
     // 存储到节点中
     node->val = globalVar;

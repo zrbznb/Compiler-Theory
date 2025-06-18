@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "Use.h"
 #include "Type.h"
@@ -47,6 +48,11 @@ protected:
     /// @brief define-use链，这个定值被使用的所有边，即所有的User
     ///
     std::vector<Use *> uses;
+
+    ///
+    /// @brief 数组维度列表（仅当此Value是数组类型时有效）
+    ///
+    std::vector<int> dimensions;
 
 public:
     /// @brief 构造函数
@@ -79,6 +85,30 @@ public:
     /// @brief 获取类型
     /// @return 变量名
     virtual Type * getType();
+
+    ///
+    /// @brief 获取数组维度
+    /// @return 维度向量
+    ///
+    const std::vector<int>& getDimensions() const { return dimensions; }
+
+    ///
+    /// @brief 设置数组维度
+    /// @param _dimensions 维度列表
+    ///
+    void setDimensions(const std::vector<int>& _dimensions) { dimensions = _dimensions; }
+
+    ///
+    /// @brief 获取数组元素总数
+    /// @return 元素数量
+    ///
+    int getTotalElements() const;
+
+    ///
+    /// @brief 获取数组总字节大小
+    /// @return 总字节大小
+    ///
+    int getTotalSize() const;
 
     ///
     /// @brief 增加一条边，增加Value被使用次数

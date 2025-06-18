@@ -109,6 +109,9 @@ void Function::toString(std::string & str)
         if (isArrayVar) {
             // 数组变量的声明格式
             str += "\tdeclare " + var->getType()->toString() + " " + var->getIRName();
+            for (auto & child: var->dimensions) {
+				str += "[" + std::to_string(child) + "]";
+			}
         } else {
             // 普通变量声明
             str += "\tdeclare " + var->getType()->toString() + " " + var->getIRName();
@@ -256,7 +259,16 @@ LocalVariable * Function::newLocalVarValue(Type * type, std::string name, int32_
 
     return varValue;
 }
+LocalVariable * Function::newLocalVarValue(Type * type, std::string name, int32_t scope_level,std::vector<int> dimensions)
+{
+    // 创建变量并加入符号表
+    LocalVariable * varValue = new LocalVariable(type, name, scope_level);
+	varValue->setDimensions(dimensions);
+    // varsVector表中可能存在变量重名的信息
+    varsVector.push_back(varValue);
 
+    return varValue;
+}
 /// @brief 新建一个内存型的Value，并加入到符号表，用于后续释放空间
 /// \param type 变量类型
 /// \return 临时变量Value

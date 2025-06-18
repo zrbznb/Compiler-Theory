@@ -69,7 +69,8 @@ public:
     /// @brief 在遍历抽象语法树的过程中，获取当前正在处理的函数。在函数外处理时返回空指针。
     ///
     Function * getCurrentFunction();
-
+    GlobalVariable * newGlobalVariable(Type * type, std::string name, std::vector<int> dimensions);
+    Value * newVarValue(Type * type, std::string name,std::vector<int> dimensions);
     ///
     /// @brief 设置当前正在处理的函数指针。函数外设置空指针
     /// @param current

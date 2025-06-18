@@ -51,11 +51,15 @@ public:
     /// @brief 获取变量声明字符串表示
     /// @return 声明字符串
     std::string toDeclareString() const {
-        std::string result = type->toString() + " " + getIRName();
+        std::string result ="declare "+ type->toString() + " " + getIRName();
         
         // 检查是否为数组类型
         if (type->isArrayType()) {
-            // 不再需要输出数组维度，因为已经包含在type->toString()中了
+
+            for (auto & child: dimensions) {
+				result += "[" + std::to_string(child) + "]";
+			}
+			
         }
         
         return result;

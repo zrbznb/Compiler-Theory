@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <vector>
 #include "Types/IntegerType.h"
 #include "../Type.h"
 
@@ -26,26 +25,15 @@ private:
     /// @brief 基本类型
     Type* elementType;
     
-    /// @brief 维度列表
-    std::vector<int> dimensions;
-    
     /// @brief 私有构造函数，通过静态方法创建
-    ArrayType(Type* _elementType, const std::vector<int>& _dimensions);
+    ArrayType(Type* _elementType);
     
 public:
     /// @brief 获取数组元素类型
     /// @return 元素类型
     Type* getElementType() const { return elementType; }
     
-    /// @brief 获取数组维度
-    /// @return 维度向量
-    const std::vector<int>& getDimensions() const { return dimensions; }
-    
-    /// @brief 获取数组元素总数
-    /// @return 元素数量
-    int getTotalElements() const;
-    
-    /// @brief 获取类型大小
+    /// @brief 获取类型大小（基本元素类型的大小）
     /// @return 类型占用的字节数
     int32_t getSize() const override;
     
@@ -55,7 +43,6 @@ public:
     
     /// @brief 创建数组类型
     /// @param elementType 元素类型
-    /// @param dimensions 维度列表
     /// @return 数组类型指针
-    static ArrayType* getType(Type* elementType, const std::vector<int>& dimensions);
+    static ArrayType* getType(Type* elementType);
 };

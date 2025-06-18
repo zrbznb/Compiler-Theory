@@ -135,3 +135,39 @@ void Value::setLoadRegId(int32_t regId)
 {
     (void) regId;
 }
+
+///
+/// @brief 计算Value所代表的数组的元素总数
+/// @return int 数组元素总数
+///
+int Value::getTotalElements() const
+{
+    // 如果没有维度信息，返回1
+    if (dimensions.empty()) {
+        return 1;
+    }
+    
+    // 如果数组是形参（第一维为0），则只返回指针大小除以元素大小
+    if (dimensions[0] == 0) {
+        return 1;  // 指针本身只是一个元素
+    }
+    
+    // 计算所有维度的乘积
+    int total = 1;
+    for (int dim : dimensions) {
+        total *= dim;
+    }
+    return total;
+}
+
+///
+/// @brief 计算Value所占用的总字节数
+/// @return int 总字节数
+///
+int Value::getTotalSize() const
+{
+    if (type->isArrayType()) {
+        return type->getSize() * getTotalElements();
+    }
+    return type->getSize();
+}

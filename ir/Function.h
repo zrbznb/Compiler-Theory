@@ -96,7 +96,7 @@ public:
     {
         return true;
     }
-
+	LocalVariable * newLocalVarValue(Type * type, std::string name, int32_t scope_level,std::vector<int> dimensions);
     /// @brief 获取最大栈帧深度
     /// @return 栈帧深度
     int getMaxDep();

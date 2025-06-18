@@ -25,9 +25,16 @@ Move2Instruction::Move2Instruction(Function * _func,
                         Value * _srcVal1)
 						: Instruction(_func, IRInstOperator::IRINST_OP_MOVE, IntegerType::getTypeInt())
 {
+    this->x=0;
     addOperand(_srcVal1);
 }
-
+Move2Instruction::Move2Instruction(Function * _func,
+	Value * _srcVal1,int x)
+	: Instruction(_func, IRInstOperator::IRINST_OP_MOVE, IntegerType::getTypeInt())
+{
+    this->x=x;
+addOperand(_srcVal1);
+}
 /// @brief 转换成字符串
 /// @param str 转换后的字符串
 void Move2Instruction::toString(std::string & str)
@@ -35,6 +42,9 @@ void Move2Instruction::toString(std::string & str)
 
     
 	Value *dstVal = getOperand(0);
-
+    if (x == 1) {
+		str = getIRName() + " = *" + dstVal->getIRName();
+    } else
+        
     str = getIRName() + " = " + dstVal->getIRName();
 }

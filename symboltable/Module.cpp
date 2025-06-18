@@ -221,8 +221,48 @@ Value * Module::newVarValue(Type * type, std::string name)
 
     return retVal;
 }
+Value * Module::newVarValue(Type * type, std::string name,std::vector<int> dimensions)
+{
+    Value * retVal;
+    std::string varName;
 
-/// @brief 查找变量，会根据作用域栈进行逐级查找。
+    // 若变量名有效，检查当前作用域中是否存在变量，如存在则语义错误
+    // 反之，因无效需创建新的变量名，肯定不现在的不同，不需要查找
+    if (!name.empty()) {
+        Value * tempValue = scopeStack->findCurrentScope(name);
+        if (tempValue) {
+            // 变量存在，语义错误
+            minic_log(LOG_ERROR, "变量(%s)已经存在", name.c_str());
+            return nullptr;
+        }
+    } else if (!currentFunc) {
+        // 全局变量要求name不能为空串，必须有效
+        minic_log(LOG_ERROR, "变量名为空");
+        return nullptr;
+    }
+
+    if (currentFunc) {
+
+        // 获取变量作用域的层级
+        int32_t scope_level;
+        if (name.empty()) {
+            scope_level = 1;
+        } else {
+            scope_level = scopeStack->getCurrentScopeLevel();
+        }
+
+        retVal = currentFunc->newLocalVarValue(type, name, scope_level,dimensions);
+
+    } else {
+        retVal = newGlobalVariable(type, name,dimensions);
+    }
+
+    // 增加做作用域中
+    scopeStack->insertValue(retVal);
+
+    return retVal;
+}
+/// @brief 查找变量，会根据作用域栈进行逐级查找。,std::vector<int> dimensions
 /// ! 该函数只有在AST遍历生成线性IR中使用，其它地方不能使用
 ///
 /// @param name 变量ID
@@ -245,6 +285,14 @@ GlobalVariable * Module::newGlobalVariable(Type * type, std::string name)
 {
     GlobalVariable * val = new GlobalVariable(type, name);
 
+    insertGlobalValueDirectly(val);
+
+    return val;
+}
+GlobalVariable * Module::newGlobalVariable(Type * type, std::string name,std::vector<int> dimensions)
+{
+    GlobalVariable * val = new GlobalVariable(type, name);
+	val->setDimensions(dimensions);
     insertGlobalValueDirectly(val);
 
     return val;
