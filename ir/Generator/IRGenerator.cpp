@@ -528,12 +528,26 @@ bool IRGenerator::ir_mul(ast_node * node)
 
     // 乘法的左边操作数
     ast_node * left = ir_visit_ast_node(src1_node);
+    Move2Instruction * movInst=nullptr;
+    if (src1_node->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
+        movInst = new Move2Instruction(module->getCurrentFunction(), left->val, 1);
+        left->val = movInst;
+    }
     if (!left) {
         return false;
     }
+    node->blockInsts.addInst(left->blockInsts);
+    node->blockInsts.addInst(movInst);
 
     // 乘法的右边操作数
     ast_node * right = ir_visit_ast_node(src2_node);
+    Move2Instruction * movInst2=nullptr;
+    if (src2_node->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
+        movInst2 = new Move2Instruction(module->getCurrentFunction(), right->val, 1);
+        right->val = movInst2;
+    }
+    node->blockInsts.addInst(right->blockInsts);
+    node->blockInsts.addInst(movInst2);
     if (!right) {
         return false;
     }
@@ -544,8 +558,7 @@ bool IRGenerator::ir_mul(ast_node * node)
                                                         right->val,
                                                         IntegerType::getTypeInt());
 
-    node->blockInsts.addInst(left->blockInsts);
-    node->blockInsts.addInst(right->blockInsts);
+
     node->blockInsts.addInst(mulInst);
 
     node->val = mulInst;
@@ -742,6 +755,16 @@ bool IRGenerator::ir_assign(ast_node * node)
         // 这里缺省设置变量不存在则创建，因此这里不会错误
         return false;
     }
+    // Move2Instruction * movInst=nullptr;
+    // if (left->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
+    //     movInst = new Move2Instruction(module->getCurrentFunction(), left->val, 1);
+    //     left->val = movInst;
+    // }
+    if (!left) {
+        return false;
+    }
+    node->blockInsts.addInst(left->blockInsts);
+    // node->blockInsts.addInst(movInst);
 
     // 赋值运算符的右侧操作数
     ast_node * right = ir_visit_ast_node(son2_node);
@@ -749,17 +772,24 @@ bool IRGenerator::ir_assign(ast_node * node)
         // 某个变量没有定值
         return false;
     }
+    Move2Instruction * movInst2=nullptr;
+    if (right->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
+        movInst2 = new Move2Instruction(module->getCurrentFunction(), right->val, 1);
+        right->val = movInst2;
+    }
+    node->blockInsts.addInst(right->blockInsts);
+    node->blockInsts.addInst(movInst2);
 
     // 这里只处理整型的数据，如需支持实数，则需要针对类型进行处理
 
-    MoveInstruction * movInst = new MoveInstruction(module->getCurrentFunction(), left->val, right->val);
+    MoveInstruction * movInstend = new MoveInstruction(module->getCurrentFunction(), left->val, right->val);
     node->blockInsts.addInst(left->blockInsts);
     node->blockInsts.addInst(right->blockInsts);
     // 创建临时变量保存IR的值，以及线性IR指令
-    node->blockInsts.addInst(movInst);
+    node->blockInsts.addInst(movInstend);
 
     // 这里假定赋值的类型是一致的
-    node->val = movInst;
+    node->val = movInstend;
 
     return true;
 }
@@ -1741,6 +1771,7 @@ bool IRGenerator::ir_array_access(ast_node* node)
         t=addInst;
         node->blockInsts.addInst(addInst);
     }
+    
     BinaryInstruction * mulInst4=nullptr;
     if (t != nullptr) {
         mulInst4 = new BinaryInstruction(module->getCurrentFunction(),
@@ -1749,7 +1780,14 @@ bool IRGenerator::ir_array_access(ast_node* node)
                                                             module->newConstInt(4),
                                                             IntegerType::getTypeInt());
 		node->blockInsts.addInst(mulInst4);
-    }
+    } else {
+        mulInst4 = new BinaryInstruction(module->getCurrentFunction(),
+                                                            IRInstOperator::IRINST_OP_MUL_I,
+                                                            indices[0],
+                                                            module->newConstInt(4),
+                                                            IntegerType::getTypeInt());
+		node->blockInsts.addInst(mulInst4);
+	}
     // 创建 int* 类型
 	Type* intType = IntegerType::getTypeInt();  // 假设32位整数
 	// ...existing code...
@@ -1966,10 +2004,10 @@ bool IRGenerator::ir_global_array_decl(ast_node* node)
     ArrayType* arrayType = ArrayType::getType(elementType);
     
     // 创建全局数组变量
-    GlobalVariable* globalVar = module->newGlobalVariable(arrayType, arrayName, dimensions);
+    Value* arrayVar = module->newVarValue(arrayType, arrayName, dimensions);
     
     // 存储到节点中
-    node->val = globalVar;
+    node->val = arrayVar;
     
     return true;
 }
