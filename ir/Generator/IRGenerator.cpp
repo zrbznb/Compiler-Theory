@@ -487,7 +487,7 @@ bool IRGenerator::ir_add(ast_node * node)
     // 加法的右边操作数
     ast_node * right = ir_visit_ast_node(src2_node);
     Move2Instruction * movInst2=nullptr;
-    if (src1_node->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
+    if (src2_node->node_type == ast_operator_type::AST_OP_ARRAY_ACCESS) {
         movInst2 = new Move2Instruction(module->getCurrentFunction(), right->val, 1);
         right->val = movInst2;
     }
